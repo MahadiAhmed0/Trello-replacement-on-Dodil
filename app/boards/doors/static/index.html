@@ -27,9 +27,9 @@
   </a>
   <nav class="pickers" aria-label="Workspace and board">
     <label class="sr" for="ws-pick">Workspace</label>
-    <select id="ws-pick"></select>
+    <select id="ws-pick" hidden></select>
     <label class="sr" for="board-pick">Board</label>
-    <select id="board-pick"></select>
+    <select id="board-pick" hidden></select>
   </nav>
   <form id="search" class="search" role="search">
     <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
@@ -49,15 +49,15 @@
 </header>
 
 <main id="main">
-  <section id="empty" class="empty" hidden></section>
+  <section id="empty" class="empty"><p class="note">Loading your boards…</p></section>
   <section id="board" class="board" hidden>
     <div class="board-head">
       <h1 id="board-title"></h1>
       <span id="board-role" class="badge"></span>
       <div class="spacer"></div>
-      <button type="button" class="quiet" data-panel="summary"><svg class="icon" aria-hidden="true"><use href="#i-summary"/></svg><span>Daily summary</span></button>
+      <button type="button" class="quiet" data-panel="summary" title="Daily summary"><svg class="icon" aria-hidden="true"><use href="#i-summary"/></svg><span>Daily summary</span></button>
       <button type="button" class="quiet d-only" data-panel="activity"><svg class="icon" aria-hidden="true"><use href="#i-activity"/></svg><span>Activity</span></button>
-      <button type="button" id="new-board" class="quiet"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>Board</span></button>
+      <button type="button" id="new-board" class="quiet" title="New board"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>Board</span></button>
     </div>
     <nav id="lane-tabs" class="lane-tabs" aria-label="Lists"></nav>
     <div id="lanes" class="lanes"></div>
