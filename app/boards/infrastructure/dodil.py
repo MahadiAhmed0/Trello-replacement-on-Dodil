@@ -129,7 +129,8 @@ class ModelsAssistant:
         return _unwrap(r.json())
 
     def _chat(self, system: str, user: str) -> str:
-        body = self._post("/chat/completions", {"model": CHAT_MODEL, "temperature": 0.2,
+        # No `temperature`: kimi-k2.6 rejects it ("invalid for this model"), seen as a 500.
+        body = self._post("/chat/completions", {"model": CHAT_MODEL,
                                                 "messages": [{"role": "system", "content": system},
                                                              {"role": "user", "content": user}]},
                           timeout=120)
