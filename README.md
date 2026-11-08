@@ -59,7 +59,12 @@ Optional:
 and change its list). Click a card to edit it, see its history, add "blocked by" links, ask the
 assistant for a checklist or similar cards. "My plate", "Overdue", "People", "Daily summary" and
 "Activity" open in the side panel. The owner invites people under **People** and puts them on
-boards.
+boards. Press `/` to search.
+
+**On a phone:** the same page, laid out for a thumb. The four views sit in a bottom bar, lists
+swipe one at a time (tabs above them jump between lists), and a card opens as a full-screen
+sheet. To move a card, press and hold it, then drag; hold at the screen edge to reach the next
+list. Viewers see the board without any editing controls.
 
 **From Claude or ChatGPT**, for example:
 
@@ -132,8 +137,10 @@ gateway; ignored whenever `DODIL_USER_POOL` is set), then
 
 ## What I'd improve next
 
-Idempotency keys for card creation, comments and attachments, archiving cards, live updates
-between people on the same board, and graph-native dependency queries for very large boards.
+Idempotency keys for card creation, comments and attachments, archiving and deleting cards and
+boards, live updates between people on the same board, a per-workspace time zone (overdue is
+computed on the server's UTC date today), a faster daily summary (the chat model takes up to a
+minute), and graph-native dependency queries for very large boards.
 
 ## Licence
 

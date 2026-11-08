@@ -74,6 +74,34 @@ assignments, blockers, invitations and role changes are all recorded. The card d
 - **Overdue** is computed on every read (due date before today, not in a done list) and flagged
   in red on the board, in the API and in MCP results.
 
+## Speed
+
+Measured from Bangladesh against the UK region, where one network round trip is ~215 ms:
+
+- **One request draws the page.** `GET /api/start` returns the person, their workspaces and
+  boards, the board they last had open and the late-card count. The page used to wait for
+  `/api/me`, then the board, then `/api/overdue`, one after another.
+- **Parallel single-table reads.** Working out what someone can see
+  (`Repository.visible_to`) is three steps of independent reads run at the same time, not six
+  queries in a row; a board's cards and links come together (`Repository.contents`). A JOIN was
+  tried first and measured far slower on DataK3, so the code stays with plain indexed reads.
+- **Warm start.** At startup the app fetches its service token and opens a few DataK3
+  connections, so the first visitor after a deploy doesn't pay for TLS handshakes.
+
+Result: the page's data arrives in ~380 ms (was ~700–900 ms) and the board is on screen in about
+0.7 s.
+
+## The page
+
+Plain HTML, CSS and JavaScript with no build step, served by the same app under a strict
+Content-Security-Policy. One green accent is reserved for "do this" (primary buttons, your own
+avatar, the active view); red means late, amber soon, violet blocked, and nothing else uses those
+colors. Drag and drop is built on pointer events so one path serves mouse, pen and touch: a
+mouse drags after 5 px of movement, a finger after a 250 ms press so ordinary swipes still
+scroll. The card is moved on screen before the server answers, then the board reloads from the
+server either way. On phones the views move to a bottom bar, lists snap one at a time, and a
+card opens as a full-screen sheet with the save button pinned to the bottom.
+
 ## Security choices
 
 - **No login code.** The Dodil gateway signs people in through the app's user pool and injects
