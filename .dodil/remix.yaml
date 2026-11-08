@@ -1,0 +1,21 @@
+# What a remix creates in the organization it goes into. Reference: `dodil guide remix`.
+version: 1
+description: Tasklane - team task boards with roles, drag and drop, history, and real MCP actions for Claude and ChatGPT.
+topics: [boards, kanban, tasks, mcp, fastapi]
+provision:
+  buckets:
+    - name: "${{ dodil.repo }}-data"      # keep the repo name <= 18 characters (25 max here)
+      on_conflict: fail                   # deploy.yaml names this bucket: never suffix it
+      schema: schema.sql
+  user_pools:
+    - name: "${{ dodil.repo }}-users"
+      on_conflict: fail                   # deploy.yaml names this pool: never suffix it
+      roles: [member]                     # board roles (owner/member/viewer) live in the app's data
+  service_accounts:
+    - name: "${{ dodil.repo }}-app"
+      grants:
+        - { role: k3.editor, bucket: "${{ dodil.repo }}-data" }
+        - { role: ignite.model-user }      # the AI extras call Dodil Models, billed to the remixer's org
+      secrets:
+        client_id: DODIL_SERVICE_ACCOUNT_ID
+        client_secret: DODIL_SERVICE_ACCOUNT_SECRET

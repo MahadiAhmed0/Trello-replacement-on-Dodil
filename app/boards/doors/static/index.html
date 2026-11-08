@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasklane</title>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" aria-label="Tasklane home">
+    <img src="/static/logo.svg" alt="" width="26" height="26"><span>Tasklane</span>
+  </a>
+  <nav class="pickers" aria-label="Workspace and board">
+    <label class="sr" for="ws-pick">Workspace</label>
+    <select id="ws-pick"></select>
+    <label class="sr" for="board-pick">Board</label>
+    <select id="board-pick"></select>
+  </nav>
+  <form id="search" class="search" role="search">
+    <label class="sr" for="q">Search cards</label>
+    <input id="q" type="search" placeholder="Search cards, #12, label…" autocomplete="off">
+  </form>
+  <div class="actions">
+    <button type="button" data-panel="plate">My plate</button>
+    <button type="button" data-panel="overdue">Overdue</button>
+    <button type="button" data-panel="people">People</button>
+    <span id="who" class="who"></span>
+    <a class="link" href="/.dodil/auth/logout">Sign out</a>
+  </div>
+</header>
+
+<main id="main">
+  <section id="empty" class="empty" hidden></section>
+  <section id="board" class="board" hidden>
+    <div class="board-head">
+      <h1 id="board-title"></h1>
+      <span id="board-role" class="badge"></span>
+      <div class="spacer"></div>
+      <button type="button" data-panel="summary">Daily summary</button>
+      <button type="button" data-panel="activity">Activity</button>
+      <button type="button" id="new-board" class="ghost">New board</button>
+    </div>
+    <div id="lanes" class="lanes"></div>
+  </section>
+</main>
+
+<aside id="panel" class="panel" hidden aria-live="polite">
+  <div class="panel-head"><h2 id="panel-title"></h2>
+    <button type="button" class="ghost" id="panel-close" aria-label="Close panel">✕</button></div>
+  <div id="panel-body" class="panel-body"></div>
+</aside>
+
+<dialog id="card-dialog" class="card-dialog">
+  <form method="dialog" id="card-form"></form>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
