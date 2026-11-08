@@ -26,6 +26,10 @@ class Event:
 
 
 class Repository(Protocol):
+    # batched reads (one call per page instead of many)
+    def visible_to(self, email: str) -> tuple: ...           # (workspaces, boards, lists)
+    def contents(self, board_ids: Iterable[str]) -> tuple: ...  # (cards, links)
+
     # workspaces and their people
     def get_workspace(self, workspace_id: str) -> Optional[Workspace]: ...
     def workspaces_for(self, email: str) -> list: ...

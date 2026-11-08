@@ -11,6 +11,7 @@ import os
 import queue
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 
 import httpx
@@ -58,6 +59,14 @@ class Database:
         self.bucket = bucket or os.environ.get("BUCKET", "")
         self._idle: queue.LifoQueue = queue.LifoQueue()
         self._gate = threading.BoundedSemaphore(DB_CONCURRENCY)
+        self._pool = ThreadPoolExecutor(max_workers=DB_CONCURRENCY, thread_name_prefix="db")
+
+    def parallel(self, *fns):
+        """Run independent reads at once and return their results in order. Each read takes its
+        own connection, so a page that needs five lookups waits for the slowest, not the sum.
+        Tasks never call parallel() themselves, so the pool can't deadlock on itself."""
+        futures = [self._pool.submit(fn) for fn in fns]
+        return [f.result() for f in futures]
 
     def _open(self):
         conn = psycopg.connect(host=PG_HOST, port=PG_PORT, dbname=self.bucket, user="token",

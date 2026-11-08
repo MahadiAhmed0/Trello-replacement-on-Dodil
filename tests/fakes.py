@@ -16,6 +16,16 @@ class MemoryRepo:
         self.links, self.events = set(), []
         self.steal_next_number = False  # simulate another writer claiming a number first
 
+    # batched reads
+    def visible_to(self, email):
+        workspaces = self.workspaces_for(email)
+        boards = self.boards_in([w.id for w in workspaces])
+        return workspaces, boards, self.lists_on([b.id for b in boards])
+
+    def contents(self, board_ids):
+        ids = list(board_ids)
+        return self.cards_on(ids), self.links_on(ids)
+
     # workspaces
     def get_workspace(self, ws_id):
         return copy.deepcopy(self.workspaces.get(ws_id))

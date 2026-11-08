@@ -90,10 +90,7 @@ class Boards:
     # ------------------------------------------------------------------ seeing things
 
     def _view(self, person: Person) -> _View:
-        workspaces = self.repo.workspaces_for(person.email)
-        boards = self.repo.boards_in([w.id for w in workspaces])
-        lists = self.repo.lists_on([b.id for b in boards])
-        return _View(person, workspaces, boards, lists)
+        return _View(person, *self.repo.visible_to(person.email))
 
     def _workspace(self, view: _View, ref: Optional[str]) -> Workspace:
         if not ref:
@@ -172,11 +169,11 @@ class Boards:
                             card_number=card, actor=actor.email, action=action,
                             changes=changes or [], at=datetime.now(timezone.utc)))
 
-    def _open_blockers(self, view: _View, cards: dict) -> dict:
+    def _open_blockers(self, view: _View, cards: dict, links: list) -> dict:
         """card number -> numbers of the OPEN cards directly blocking it."""
         done = view.done_ids()
         out = {}
-        for c, b in self.repo.links_on(list(view.boards)):
+        for c, b in links:
             blocker = cards.get(b)
             if blocker is not None and blocker.list_id not in done:
                 out.setdefault(c, []).append(b)
@@ -191,12 +188,16 @@ class Boards:
         return {"id": ws.id, "name": ws.name, "role": Role.OWNER.value}
 
     def me(self, person: Person) -> dict:
-        view = self._view(person)
+        return self._me(self._view(person))
+
+    def _me(self, view: _View) -> dict:
+        person = view.person
         return {"email": person.email, "workspaces": [
             {"id": w.id, "name": w.name, "role": w.role_of(person).value,
-             "boards": [{"id": b.id, "title": b.title} for b in view.boards.values()
+             "boards": [{"id": b.id, "title": b.title}
+                        for b in sorted(view.boards.values(), key=lambda b: b.title.lower())
                         if b.workspace_id == w.id]}
-            for w in view.workspaces.values()]}
+            for w in sorted(view.workspaces.values(), key=lambda w: w.name.lower())]}
 
     def workspace_people(self, person: Person, workspace: Optional[str] = None) -> dict:
         view = self._view(person)
@@ -263,8 +264,33 @@ class Boards:
     def show_board(self, person: Person, board: str) -> dict:
         view = self._view(person)
         b = self._board(view, board)
-        cards = {c.number: c for c in self.repo.cards_on([b.id])}
-        blockers = self._open_blockers(view, cards)
+        cards, links = self.repo.contents([b.id])
+        return self._board_out(view, b, cards, links)
+
+    def start(self, person: Person, board: Optional[str] = None,
+              workspace: Optional[str] = None) -> dict:
+        """Everything the web page needs to draw itself, in one round trip: who you are, your
+        workspaces and boards, the board you last had open (else the first board of the
+        workspace you are in, else the first you can see), and how many cards are late."""
+        view = self._view(person)
+        me = self._me(view)
+        b = view.boards.get(str(board or ""))
+        if b is None:
+            spaces = [w for w in me["workspaces"] if w["id"] == workspace] or me["workspaces"]
+            b = next((view.boards[x["id"]] for w in spaces[:1] for x in w["boards"]), None)
+        cards, links = self.repo.contents(list(view.boards))
+        today, done = self.today(), view.done_ids()
+        late = sum(1 for c in cards if c.is_overdue(today, done))
+        shown = None
+        if b is not None:
+            shown = self._board_out(view, b, [c for c in cards if c.board_id == b.id],
+                                    [l for l in links if l[0] in {c.number for c in cards
+                                                                  if c.board_id == b.id}])
+        return {"me": me, "board": shown, "late_count": late}
+
+    def _board_out(self, view: _View, b: Board, card_list: list, links: list) -> dict:
+        cards = {c.number: c for c in card_list}
+        blockers = self._open_blockers(view, cards, links)
         lists = []
         for l in view.lists_of(b.id):
             in_list = sorted((c for c in cards.values() if c.list_id == l.id),
@@ -348,8 +374,9 @@ class Boards:
     def card_details(self, person: Person, number) -> dict:
         view = self._view(person)
         b, card = self._card(view, number)
-        cards = {c.number: c for c in self.repo.cards_on([b.id])}
-        blockers = self._open_blockers(view, cards)
+        card_list, links = self.repo.contents([b.id])
+        cards = {c.number: c for c in card_list}
+        blockers = self._open_blockers(view, cards, links)
         blocks = sorted(c for c, bl in blockers.items() if card.number in bl)
         out = self._card_out(view, card, blockers.get(card.number, []))
         out["blocks"] = blocks

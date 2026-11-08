@@ -102,6 +102,10 @@ def build_router(boards: Boards) -> APIRouter:
 
     # ---------------------------------------------------------------- people & workspaces
 
+    @r.get("/api/start")
+    def start(board: Optional[str] = None, workspace: Optional[str] = None, p: Person = read):
+        return run(boards.start, p, board, workspace)
+
     @r.get("/api/me")
     def whoami(p: Person = read):
         return run(boards.me, p)

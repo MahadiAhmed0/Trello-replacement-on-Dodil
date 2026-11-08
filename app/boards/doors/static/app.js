@@ -83,17 +83,6 @@ function dueChip(c) {
 
 // ------------------------------------------------------------------ loading
 
-async function loadMe() {
-  state.me = await api("GET", "/api/me");
-  $("who").textContent = state.me.email;
-  const wss = state.me.workspaces;
-  if (!wss.some((w) => w.id === state.wsId)) {
-    const saved = recall("ws");
-    state.wsId = (wss.find((w) => w.id === saved) || wss[0] || {}).id || null;
-  }
-  renderPickers();
-}
-
 function renderPickers() {
   const wsPick = $("ws-pick"), boardPick = $("board-pick");
   wsPick.replaceChildren(...state.me.workspaces.map((w) =>
@@ -119,18 +108,30 @@ async function loadBoard() {
 }
 
 async function refreshLateCount() {
-  try {
-    const late = await api("GET", "/api/overdue");
-    const dot = $("late-count");
-    dot.textContent = late.length > 9 ? "9+" : String(late.length);
-    dot.hidden = !late.length;
-  } catch (_) { /* the badge is a nicety; never block the page on it */ }
+  try { setLateCount((await api("GET", "/api/overdue")).length); }
+  catch (_) { /* the badge is a nicety; never block the page on it */ }
 }
 
+function setLateCount(n) {
+  const dot = $("late-count");
+  dot.textContent = n > 9 ? "9+" : String(n);
+  dot.hidden = !n;
+}
+
+// One round trip draws the whole page: who you are, your boards, the open board, late count.
 async function refresh() {
-  await loadMe();
-  await loadBoard();
-  refreshLateCount();
+  const board = state.boardId || (state.wsId ? "" : recall("board")) || "";
+  const space = state.wsId || recall("ws") || "";
+  const r = await api("GET", "/api/start?" + new URLSearchParams({ board, workspace: space }));
+  state.me = r.me;
+  $("who").textContent = r.me.email;
+  if (r.board) { state.wsId = r.board.workspace_id; state.boardId = r.board.id; }
+  else if (!r.me.workspaces.some((w) => w.id === state.wsId)) state.wsId = (r.me.workspaces.find((w) => w.id === space) || r.me.workspaces[0] || {}).id || null;
+  if (!r.board) state.boardId = null;
+  renderPickers();
+  state.board = r.board;
+  if (r.board) { remember("board", r.board.id); remember("ws", r.board.workspace_id); renderBoard(); } else renderEmpty();
+  setLateCount(r.late_count);
   if (state.panel) await openPanel(state.panel, true);
 }
 

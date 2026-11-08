@@ -74,6 +74,50 @@ class SqlRepository:
         found = self._workspaces(rows)
         return found[0] if found else None
 
+    def visible_to(self, email: str) -> tuple:
+        """(workspaces, boards, lists) for one person in three parallel steps instead of six
+        sequential queries. Single-table reads only: on DataK3 a JOIN costs far more than a
+        second indexed read run at the same time."""
+        ids = [r[0] for r in self._all(
+            "SELECT id FROM workspaces WHERE owner_email = %s "
+            "UNION SELECT workspace_id FROM workspace_members WHERE email = %s", (email, email))]
+        if not ids:
+            return [], [], []
+        ws_rows, member_rows, board_rows = self.db.parallel(
+            lambda: self._all("SELECT id, name, owner_email FROM workspaces WHERE id = ANY(%s)", (ids,)),
+            lambda: self._all("SELECT workspace_id, email, role FROM workspace_members "
+                              "WHERE workspace_id = ANY(%s)", (ids,)),
+            lambda: self._all("SELECT id, workspace_id, title, created_by FROM boards "
+                              "WHERE workspace_id = ANY(%s)", (ids,)))
+        members: dict = {}
+        for ws_id, m_email, role in member_rows:
+            members.setdefault(ws_id, {})[m_email] = Role(role)
+        workspaces = [Workspace(id=r[0], name=r[1], owner_email=r[2], members=members.get(r[0], {}))
+                      for r in ws_rows]
+        board_ids = [r[0] for r in board_rows]
+        if not board_ids:
+            return workspaces, [], []
+        bm_rows, list_rows = self.db.parallel(
+            lambda: self._all("SELECT board_id, email FROM board_members WHERE board_id = ANY(%s)",
+                              (board_ids,)),
+            lambda: self._all("SELECT id, board_id, name, sort_key, is_done FROM board_lists "
+                              "WHERE board_id = ANY(%s)", (board_ids,)))
+        on_board: dict = {}
+        for board_id, b_email in bm_rows:
+            on_board.setdefault(board_id, set()).add(b_email)
+        boards = [Board(id=r[0], workspace_id=r[1], title=r[2], created_by=r[3],
+                        members=on_board.get(r[0], set())) for r in board_rows]
+        lists = [BoardList(id=r[0], board_id=r[1], name=r[2], sort_key=float(r[3]),
+                           is_done=bool(r[4])) for r in list_rows]
+        return workspaces, boards, lists
+
+    def contents(self, board_ids: Iterable[str]) -> tuple:
+        """(cards, links) for some boards, fetched at the same time."""
+        ids = list(board_ids)
+        if not ids:
+            return [], []
+        return tuple(self.db.parallel(lambda: self.cards_on(ids), lambda: self.links_on(ids)))
+
     def workspaces_for(self, email: str) -> list:
         ids = [r[0] for r in self._all(
             "SELECT id FROM workspaces WHERE owner_email = %s "

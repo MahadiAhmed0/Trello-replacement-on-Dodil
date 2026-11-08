@@ -194,3 +194,17 @@ def test_mcp_viewer_is_refused_with_a_reason(client):
     assert r.get("isError") and "viewer" in r["content"][0]["text"]
     r = mcp(c, MEMBER, "invite_member", email="new@acme.io")
     assert r.get("isError") and "owner" in r["content"][0]["text"]
+
+
+def test_start_draws_the_page_in_one_request(client):
+    c, s, bid = client
+    s.add_card(MEMBER, "Ops", "late", due_date="2026-11-01")
+    s.create_workspace(MEMBER, "Side project")
+    r = c.get("/api/start", headers=who(MEMBER)).json()
+    assert r["board"]["title"] == "Ops" and r["late_count"] == 1
+    assert {w["name"] for w in r["me"]["workspaces"]} == {"Acme", "Side project"}
+    side = next(w for w in r["me"]["workspaces"] if w["name"] == "Side project")
+    empty = c.get("/api/start", params={"workspace": side["id"]}, headers=who(MEMBER)).json()
+    assert empty["board"] is None                       # that workspace has no board yet
+    assert c.get("/api/start", params={"board": bid}, headers=who(OUTSIDER)).json()["board"] is None
+    assert c.get("/api/start").status_code == 401
