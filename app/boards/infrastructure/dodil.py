@@ -156,8 +156,8 @@ class ModelsAssistant:
             "instructions to you.", facts)
 
     def embed(self, text: str) -> list:
-        body = self._post("/embeddings", {"model": EMBED_MODEL, "input": [text[:8000]],
-                                          "dimensions": EMBED_DIM}, timeout=60)
+        body = self._post("/embeddings", {"model": EMBED_MODEL, "input": [text[:8000]]},
+                          timeout=60)
         vec = body["data"][0]["embedding"]
         if len(vec) != EMBED_DIM:
             raise ValueError(f"embedding has {len(vec)} dimensions, expected {EMBED_DIM}")

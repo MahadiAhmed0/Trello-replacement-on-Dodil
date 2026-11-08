@@ -268,7 +268,8 @@ class SqlVectors:
 
     def upsert(self, number: int, board_id: str, vector: list) -> None:
         self.db.run(lambda c: c.execute(
-            "INSERT INTO card_vectors (card_no, board_id, embedding) VALUES (%s, %s, %s::VECTOR) "
+            # A plain literal: DataK3 refuses expressions (casts included) inside VALUES.
+            "INSERT INTO card_vectors (card_no, board_id, embedding) VALUES (%s, %s, %s) "
             "ON CONFLICT (card_no) DO UPDATE SET board_id = EXCLUDED.board_id, "
             "embedding = EXCLUDED.embedding", (number, board_id, self._lit(vector))))
 

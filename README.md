@@ -20,7 +20,7 @@ to run it, **Dodil Models** for AI, **Dodil Git CI** to deploy. No other service
 ## Remix it (one command)
 
 ```bash
-dodil git remix <this-org>/tasklane --to-org <your-org> --name <your-repo>
+dodil git remix mahadiahmed0/tasklane --to-org <your-org> --name <your-repo>
 ```
 
 Keep `<your-repo>` to **18 characters or less** (the bucket `<repo>-data` must fit in 25).
