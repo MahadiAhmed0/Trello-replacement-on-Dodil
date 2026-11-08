@@ -111,6 +111,16 @@ def _production() -> FastAPI:
                     for t in TABLES}
         return db.run(q)
 
+    def warm_up():
+        """Fetch the service token and open a few DataK3 connections before the first visitor
+        does: otherwise the first page after a deploy pays for TLS handshakes and a token."""
+        try:
+            db.parallel(*[lambda: db.run(lambda c: c.execute("SELECT 1 AS ok").fetchone())] * 4)
+        except Exception:
+            logging.getLogger("tasklane").warning("warm-up failed; the first request will retry")
+
+    if os.environ.get("BUCKET"):
+        background.submit(warm_up)
     boards = Boards(SqlRepository(db), ModelsAssistant(), SqlVectors(db),
                     defer=lambda fn: background.submit(fn))
     return create_app(boards, self_check=counts)
